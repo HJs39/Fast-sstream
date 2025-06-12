@@ -16,6 +16,7 @@ using fast_sstream::stringstream; // Use this instead
 
 * faster than `sstream`
 * can direct output to standard stream(`stdout`,`std::basic_ostream`)
+* standard-like API
 
 ## Usage
 
@@ -25,8 +26,7 @@ fast_sstream::stringstream ss;
 ss<<"Hello world\n"<<39<<true<<0.01<<'\n';
 //output
 std::cout<<ss.view()<<ss.str();
-ss>>std::cout;
-ss>>stdout;
+ss>>std::cout>>ss>>stdout;
 ```
 output:
 ```
@@ -39,3 +39,9 @@ Hello world
 Hello world
 39true0.010000
 ```
+
+## Limitation
+
+* not thread-safe
+* no `std::locale` support
+* only orignal support `char`
