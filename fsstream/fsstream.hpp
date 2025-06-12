@@ -6,7 +6,8 @@
 #include <string_view> //for std::strin_view
 #include <string> //for std::string std::char_traits
 #include <charconv> //for std::from_chars std::to_chars
-#include <type_traits> //for std::is_same std::is_integral std::is_floating_point std::enable_if_t
+#include <type_traits> //for std::is_same std::is_integral std::is_floating_point 
+                       //std::enable_if_t std::is_base_of_v std::remove_cvref_t std::remove_pointer_t
 #include <exception> //for std::exception
 #include <sstream> //for std::istringstream
 #include <ostream> //for std::basic_ostream
@@ -413,7 +414,7 @@ namespace fast_sstream {
                 } while (result.ec != std::errc{});
             }
             buf->pbump(result.ptr - buf->pptr());
-            //trait->clear();
+            trait->clear();
         };
     };
 
@@ -617,7 +618,7 @@ namespace fast_sstream {
             }
             buf->gbump(count);
             *_g = '\0';
-            if (_g = ch) trait->setstate(ios::failbit, "scanner: failed to read string");
+            if (_g == ch) trait->setstate(ios::failbit, "scanner: failed to read string");
             if (buf->gptr() == buf->egptr())trait->setstate(ios::eofbit, "scanner: eof");
             return;
         };
@@ -827,48 +828,48 @@ namespace fast_sstream {
         }
         output_traits& operator<<(const char_type value) {
             if (src->sputc(value) == traits_type::eof()) {
-                setstate(ios::badbit, "output_traits: no such memory");
+                this->setstate(ios::badbit, "output_traits: no such memory");
             }
             else {
-                clear();
+                this->clear();
             }
             return *this;
         };
         output_traits& operator<<(const char_type* value) {
             if (src->sputn(value, traits_type::length(value)) != traits_type::length(value)) {
-                setstate(ios::badbit, "output_traits: value too large");
+                this->setstate(ios::badbit, "output_traits: value too large");
             }
             else {
-                clear();
+                this->clear();
             }
             return *this;
         };
         template<std::size_t N>
         output_traits& operator<<(const char_type(&value)[N]) {
             if (src->sputn(value, N) != N) {
-                setstate(ios::badbit, "output_traits: value too large");
+                this->setstate(ios::badbit, "output_traits: value too large");
             }
             else {
-                clear();
+                this->clear();
             }
             return *this;
         };
         template<typename Alloc>
         output_traits& operator<<(const std::basic_string<CharT, Traits, Alloc>& value) {
             if (src->sputn(value.c_str(), value.size()) != value.size()) {
-                setstate(ios::badbit, "output_traits: value too large");
+                this->setstate(ios::badbit, "output_traits: value too large");
             }
             else {
-                clear();
+                this->clear();
             }
             return *this;
         };
         output_traits& operator<<(std::basic_string_view<CharT, Traits> value) {
             if (src->sputn(value.data(), value.size()) != value.size()) {
-                setstate(ios::badbit, "output_traits: value too large");
+                this->setstate(ios::badbit, "output_traits: value too large");
             }
             else {
-                clear();
+                this->clear();
             }
             return *this;
         };
@@ -1360,48 +1361,48 @@ namespace fast_sstream {
         };
         io_traits& operator<<(const char_type value) {
             if (src->sputc(value) == traits_type::eof()) {
-                setstate(ios::badbit, "io_traits: no such memory");
+                this->setstate(ios::badbit, "io_traits: no such memory");
             }
             else {
-                clear();
+                this->clear();
             }
             return *this;
         };
         io_traits& operator<<(const char_type* value) {
             if (src->sputn(value, traits_type::length(value)) != traits_type::length(value)) {
-                setstate(ios::badbit, "io_traits: value too large");
+                this->setstate(ios::badbit, "io_traits: value too large");
             }
             else {
-                clear();
+                this->clear();
             }
             return *this;
         };
         template<std::size_t N>
         io_traits& operator<<(const char_type(&value)[N]) {
             if (src->sputn(value, N) != N) {
-                setstate(ios::badbit, "io_traits: value too large");
+                this->setstate(ios::badbit, "io_traits: value too large");
             }
             else {
-                clear();
+                this->clear();
             }
             return *this;
         };
         template<typename Alloc>
         io_traits& operator<<(const std::basic_string<CharT, Traits, Alloc>& value) {
             if (src->sputn(value.c_str(), value.size()) != value.size()) {
-                setstate(ios::badbit, "io_traits: value too large");
+                this->setstate(ios::badbit, "io_traits: value too large");
             }
             else {
-                clear();
+                this->clear();
             }
             return *this;
         };
         io_traits& operator<<(std::basic_string_view<CharT, Traits> value) {
             if (src->sputn(value.data(), value.size()) != value.size()) {
-                setstate(ios::badbit, "io_traits: value too large");
+                this->setstate(ios::badbit, "io_traits: value too large");
             }
             else {
-                clear();
+                this->clear();
             }
             return *this;
         };
