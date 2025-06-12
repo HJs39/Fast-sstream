@@ -649,7 +649,7 @@ namespace fast_sstream {
     template<typename stream>
     //output to C++ stream support
     struct scanner<stream, char, std::enable_if_t<std::is_base_of_v<std::basic_ostream<char>, stream> ||
-        std::is_base_of_v<std::basic_ostream<char>, stream>, void>> {
+        std::is_base_of_v<std::basic_iostream<char>, stream>, void>> {
         template<typename input_output_trait, typename Buf>
         static void scan(stream& dest, input_output_trait* trait, Buf* buf) {
             buf->underflow();
