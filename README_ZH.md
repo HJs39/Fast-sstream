@@ -43,4 +43,4 @@ Hello world
 ## 限制
 * 非線程安全
 * 不支援`std::locale`
-* 指原生支持`char`型別
+* 僅原生支持`char`型別
