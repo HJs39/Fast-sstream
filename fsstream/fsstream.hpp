@@ -2020,13 +2020,13 @@ namespace fast_sstream {
 
         StringView view()const noexcept {
             if ((mode & (ios::in | ios::out)) == (ios::in | ios::out) || (mode & ios::out)) {
-                return StringView{ this->pbase(),this->pptr() };
+                return { this->pbase(), static_cast<std::size_t>(this->pptr() - this->pbase()) };
             }
             else if (mode & ios::in) {
-                return StringView{ this->eback(),this->egptr() };
+                return { this->eback(), static_cast<std::size_t>(this->egptr() - this->eback()) };
             }
             else {
-                return StringView{};
+                return {};
             }
         };
 
