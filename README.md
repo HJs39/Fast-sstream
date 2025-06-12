@@ -28,7 +28,7 @@ fast_sstream::stringstream ss;
 ss<<"Hello world\n"<<39<<true<<0.01<<'\n';
 //output
 std::cout<<ss.view()<<ss.str();
-ss>>std::cout>>ss>>stdout;
+ss>>std::cout>>stdout;
 ```
 output:
 ```
