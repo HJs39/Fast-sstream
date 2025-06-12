@@ -3,7 +3,7 @@
 
 You can switch from standard string stream to `fsstream` by swapping the namespace from `std` to `fast_sstream`.
 
-This library requires `C++17` of later.
+This library requires `C++17` or later.
 
 ## Include
 ```cpp
