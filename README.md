@@ -1,22 +1,24 @@
 # `fsstream` library
-`fsstream` is a header-only string stream library, it provided standard like stream to trainslate various value to character, and you can add specialization of `parser` and `scanner` class to support your custom type.
+`fsstream` is a header-only string stream library, it provides standard-like stream to translate various values to characters, and you can specialize the `parser` and `scanner` classes to support your custom types.
 
-You can switch from standard to `fsstream` just swap the namespace `std` by `fast_sstream`(but it hasn't support `wchar_t` yet)
+You can switch from standard string stream to `fsstream` by swapping the namespace from `std` to `fast_sstream`.
 
-This library need `C++17` at least.
+This library requires `C++17` of later.
 
 ## Include
 ```cpp
 #include "fsstream.hpp"
-using namespace fast_sstream; // Don't do this, it has too many empty struct and will pollute your namespace
-using fast_sstream::stringstream; // Use this instead
+// Don't do this, this will pollute your namespace with too many empty structures and alias.
+using namespace fast_sstream;
+//Recommend:
+using fast_sstream::stringstream;
 ```
 
 ## Feature
 
-* faster than `sstream`
-* can direct output to standard stream(`stdout`,`std::basic_ostream`)
-* standard-like API
+* Faster than `sstream`.
+* Can output directly to standard stream(e.g., `stdout`,`std::basic_ostream`).
+* Standard-like API.
 
 ## Usage
 
@@ -42,6 +44,6 @@ Hello world
 
 ## Limitation
 
-* not thread-safe
-* no `std::locale` support
-* only orignal support `char`
+* not thread-safe.
+* no `std::locale` support.
+* Natively supports `char` only.
