@@ -946,7 +946,7 @@ namespace fast_sstream {
     protected:
         input_traits() = delete;
         input_traits(buf_type* associate)noexcept :ios_traits{}, src{ associate }, _gcount{ 0 } {};
-        input_traits(input_traits&& other) :, _gcount(0), src(std::move(other.src)), ios_traits(std::move(other)) {};
+        input_traits(input_traits&& other) :_gcount(0), src(std::move(other.src)), ios_traits(std::move(other)) {};
         void swap(input_traits& other)noexcept(true) {
             ios_traits::swap(other);
             buf_type* _tmp = src;
