@@ -1,3 +1,18 @@
+// -*- C++ -*-
+//===------------------------- streambuf ----------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+//^ use libc++ std::basic_streambuf function members
+//source code at:https://github.com/google/libcxx
+//see libc++ licenses at LICENSE_libc++.TXT
+// 
+//my licenses at LICENSE.TXT
 #pragma once
 #ifndef _FAST_SSTREAM_
 #define _FAST_SSTREAM_
@@ -5,9 +20,10 @@
 #include <memory> //for std::allocator
 #include <string_view> //for std::strin_view
 #include <string> //for std::string std::char_traits
+#include <cstring> //for std::memcpy
 #include <charconv> //for std::from_chars std::to_chars
 #include <type_traits> //for std::is_same std::is_integral std::is_floating_point 
-                       //std::enable_if_t std::is_base_of_v std::remove_cvref_t std::remove_pointer_t
+                       //std::enable_if_t std::is_base_of_v std::remove_cv_t std::remove_reference_t
 #include <exception> //for std::exception
 #include <sstream> //for std::istringstream
 #include <ostream> //for std::basic_ostream
@@ -301,44 +317,42 @@ namespace fast_sstream {
     //                ^parameter type     ^result char type         ^parameter type requires
     struct parser {
         //can be specialize to support custom type
-        //equal to overload operator<< for every i/o traits
         //no default support char/string type(default support in trait)
-        static_assert(false, "specialize your type parser or operator<< for custom type");
+        static_assert(false, "specialize your type parser for custom type");
     };
 
-    template<typename from_char_type, typename result_type, typename = void>
-    //                ^buffer used char type  ^to value type       ^result type requires
+    template<typename result_type, typename from_char_type, typename = void>
+    //                ^to value type        ^buffer uses char type ^result type requires
     struct scanner {
         //can be specialize to support custom type
-        //equal to operload operator>> for every i/o traits
-        static_assert(false, "specialize your type scanner of operator>> for custom type");
+        static_assert(false, "specialize your type scanner for custom type");
     };
 
     template<typename T>
     using remove_cvref_t = typename std::remove_cv_t<std::remove_reference_t<T>>;
 
     template<typename Type>
-    using is_integral = std::is_integral<remove_cvref_t<std::remove_pointer_t<Type>>>;
+    using is_integral = std::is_integral<remove_cvref_t<Type>>;
     template<typename Type>
-    using is_floating_point = std::is_floating_point<remove_cvref_t<std::remove_pointer_t<Type>>>;
+    using is_floating_point = std::is_floating_point<remove_cvref_t<Type>>;
     template<typename Type, typename _Type>
-    using is_same = std::is_same< remove_cvref_t<std::remove_pointer_t<Type>>, remove_cvref_t<_Type>>;
-
-    template<typename Type>
-    inline constexpr bool integer = (is_integral<Type>::value && !(is_same<Type, char>::value ||
-#if __cplusplus>=202002L //C++20 added char8_t
-        is_same<Type, char8_t>::value ||
-#endif
-        is_same<Type, char16_t>::value ||
-        is_same<Type, char32_t>::value ||
-        is_same<Type, wchar_t>::value ||
-        is_same<Type, bool>::value));
-
-    template<typename Type>
-    inline constexpr bool floating_point = is_floating_point<Type>::value;
+    using is_same = std::is_same<remove_cvref_t<Type>, remove_cvref_t<_Type>>;
 
     template<typename Type, typename _Type>
     inline constexpr bool same = is_same<Type, _Type>::value;
+
+    template<typename Type>
+    inline constexpr bool integer = (is_integral<Type>::value && !(same<Type, char> ||
+#ifdef __cpp_char8_t //char8_t
+        same<Type, char8_t> ||
+#endif
+        same<Type, char16_t> ||
+        same<Type, char32_t> ||
+        same<Type, wchar_t> ||
+        same<Type, bool>));
+
+    template<typename Type>
+    inline constexpr bool floating_point = is_floating_point<Type>::value;
 
     template<typename Type>
     struct parse_over_allocation_size {// default over-allocation determine
@@ -403,14 +417,14 @@ namespace fast_sstream {
             else if (buf->epptr() - buf->pptr() < parse_over_allocation_size<Integer>::size) {
                 buf->overflow();
             }
-            auto result = std::to_chars(buf->pptr(), buf->epptr(), value, trait->_base);
+            auto result = std::to_chars(buf->pptr(), buf->epptr(), value, trait->base());
             if (result.ec != std::errc{}) {
                 do {
                     if (buf->overflow() == traits_type::eof()) {
                         trait->setstate(ios::badbit, "parser: value too large");
                         return;
                     }
-                    result = std::to_chars(buf->pptr(), buf->epptr(), value, trait->_base);
+                    result = std::to_chars(buf->pptr(), buf->epptr(), value, trait->base());
                 } while (result.ec != std::errc{});
             }
             buf->pbump(result.ptr - buf->pptr());
@@ -430,7 +444,7 @@ namespace fast_sstream {
             }
             if (buf->gptr() != buf->egptr() && std::isalnum(*(buf->egptr() - 1)))buf->underflow();
             if ((trait->flag() & fmtflag::skipws) != fmtflag{})trait->skipws();
-            auto [ptr, errc] = std::from_chars(buf->gptr(), buf->egptr(), value, trait->_base);
+            auto [ptr, errc] = std::from_chars(buf->gptr(), buf->egptr(), value, trait->base());
             if (errc == std::errc{}) {
                 buf->setg(buf->eback(), const_cast<char*>(ptr), buf->egptr());
                 if (ptr == buf->epptr())trait->setstate(ios::eofbit, "scanner: eof");
@@ -453,7 +467,7 @@ namespace fast_sstream {
             }
             auto result = std::to_chars(buf->pptr(), buf->epptr(), value, (trait->flag() & fmtflag::fixed) != fmtflag{} ?
                 std::chars_format::fixed : (trait->flag() & fmtflag::scientific) != fmtflag{} ? std::chars_format::scientific :
-                (trait->flag() & fmtflag::hex) != fmtflag{} ? std::chars_format::hex : std::chars_format::general, trait->_precision);
+                (trait->flag() & fmtflag::hex) != fmtflag{} ? std::chars_format::hex : std::chars_format::general, trait->precision());
             if (result.ec != std::errc{}) {
                 do {
                     if (buf->overflow() == traits_type::eof()) {
@@ -462,7 +476,7 @@ namespace fast_sstream {
                     }
                     result = std::to_chars(buf->pptr(), buf->epptr(), value, (trait->flag() & fmtflag::fixed) != fmtflag{} ?
                         std::chars_format::fixed : (trait->flag() & fmtflag::scientific) != fmtflag{} ? std::chars_format::scientific :
-                        (trait->flag() & fmtflag::hex) != fmtflag{} ? std::chars_format::hex : std::chars_format::general, trait->_precision);
+                        (trait->flag() & fmtflag::hex) != fmtflag{} ? std::chars_format::hex : std::chars_format::general, trait->precision());
                 } while (result.ec != std::errc{});
             }
             buf->pbump(result.ptr - buf->pptr());
@@ -669,12 +683,14 @@ namespace fast_sstream {
         ios::iostate _state;
         ios::iostate _mask;
         fmtflag _flag;
+        int _base;
     protected:
-        ios_traits()noexcept :_state{ ios::goodbit }, _flag{ fmtflag::skipws | fmtflag::boolalpha | fmtflag::general | fmtflag::stdcpy }, _mask{} {};
+        ios_traits()noexcept :_state{ ios::goodbit }, _flag{ fmtflag::skipws | fmtflag::boolalpha | fmtflag::general | fmtflag::stdcpy }, _mask{}, _base{ 10 } {};
         void swap(ios_traits& other)noexcept(true) {
             fmtflag _ftmp = _flag;
             _flag = other._flag;
             other._flag = _ftmp;
+            std::swap(_base, other._base);
             std::swap(_state, other._state);
             std::swap(_mask, other._mask);
         };
@@ -682,6 +698,14 @@ namespace fast_sstream {
         //constructor
         ios_traits(const ios_traits&) = delete;
         ios_traits(ios_traits&& other)noexcept :_flag(std::move(other._flag)), _mask(std::move(other._mask)), _state(std::move(other._state)) {};
+
+        //value
+
+        inline int base()const noexcept { return _base; };
+        void base(int n_base)noexcept {
+            if (n_base < 2 || n_base>36)return;
+            _base = n_base;
+        };
 
         //ios state
         inline ios::iostate rdstate()const noexcept { return _state; };
@@ -726,22 +750,36 @@ namespace fast_sstream {
         return stream;
     };
     ios_traits& fixed(ios_traits& stream)noexcept {
-        stream.unsetf(fmtflag::general);
         stream.setf(fmtflag::fixed);
         return stream;
     };
     ios_traits& scientific(ios_traits& stream)noexcept {
-        stream.unsetf(fmtflag::general);
         stream.setf(fmtflag::scientific);
         return stream;
     };
     ios_traits& hex(ios_traits& stream)noexcept {
-        stream.unsetf(fmtflag::general);
         stream.setf(fmtflag::hex);
         return stream;
     };
     ios_traits& defaultfloat(ios_traits& stream)noexcept {
+        stream.unsetf(fmtflag::hex);
         stream.setf(fmtflag::general);
+        return stream;
+    };
+    ios_traits& skipws(ios_traits& stream)noexcept {
+        stream.setf(fmtflag::skipws);
+        return stream;
+    };
+    ios_traits& noskipws(ios_traits& stream)noexcept {
+        stream.unsetf(fmtflag::skipws);
+        return stream;
+    };
+    ios_traits& stdcpy(ios_traits& stream)noexcept {
+        stream.setf(fmtflag::stdcpy);
+        return stream;
+    };
+    ios_traits& nostdcpy(ios_traits& stream)noexcept {
+        stream.unsetf(fmtflag::stdcpy);
         return stream;
     };
 
@@ -756,25 +794,19 @@ namespace fast_sstream {
         using off_type = typename traits_type::off_type;
         std::streamsize _precision;
         buf_type* src;
-        int _base;
 
         template<typename, typename, typename>
         friend struct parser;
     protected:
         output_traits() = delete;
-        output_traits(buf_type* associate) :src{ associate }, _precision{ 6 }, _base{ 10 }, ios_traits{} {};
-        output_traits(output_traits&& other) :src{ std::move(other.src) }, _precision{ std::move(other._precision) }, _base{ std::move(other._base) }, ios_traits{ std::move(other) } {};
+        output_traits(buf_type* associate) :src{ associate }, _precision{ 6 }, ios_traits{} {};
+        output_traits(output_traits&& other) :src{ std::move(other.src) }, _precision{ std::move(other._precision) }, ios_traits{ std::move(other) } {};
         void swap(output_traits& other)noexcept(true) {
             ios_traits::swap(other);
             std::swap(_precision, other._precision);
             std::swap(src, other.src);
-            std::swap(_base, other._base);
         };
     public:
-        void setbase(int n_base)noexcept {
-            if (n_base < 2 || n_base>36)return;
-            _base = n_base;
-        };
         //precision
         inline std::streamsize precision()const noexcept { return _precision; };
         std::streamsize precision(std::streamsize new_precision) {
@@ -823,7 +855,7 @@ namespace fast_sstream {
         //for the type that specialized the parser
         template<typename Type>
         output_traits& operator<<(Type&& value) {
-            parser<std::remove_all_extents_t<Type>, char_type>::parse(std::forward<Type>(value), this, src);
+            parser<Type, char_type>::parse(std::forward<Type>(value), this, src);
             return *this;
         }
         output_traits& operator<<(const char_type value) {
@@ -910,26 +942,20 @@ namespace fast_sstream {
                 }
             }
         };
-        int _base{ 10 };
         std::streamsize _gcount;
     protected:
         input_traits() = delete;
-        input_traits(buf_type* associate)noexcept :ios_traits{}, src{ associate }, _base{ 10 }, _gcount{ 0 } {};
-        input_traits(input_traits&& other) :_base(std::move(other._base)), _gcount(0), src(std::move(other.src)), ios_traits(std::move(other)) {};
+        input_traits(buf_type* associate)noexcept :ios_traits{}, src{ associate }, _gcount{ 0 } {};
+        input_traits(input_traits&& other) :, _gcount(0), src(std::move(other.src)), ios_traits(std::move(other)) {};
         void swap(input_traits& other)noexcept(true) {
             ios_traits::swap(other);
             buf_type* _tmp = src;
             src = other.src;
             other.src = _tmp;
-            std::swap(_base, other._base);
             std::swap(_gcount, other._gcount);
         };
 
     public:
-        void setbase(int n_base)noexcept {
-            if (n_base < 2 || n_base>36)return;
-            _base = n_base;
-        };
 
         inline input_traits& putback(char_type ch)noexcept(noexcept(src->sputbackc(ch))) {
             _gcount = 0;
@@ -1146,25 +1172,18 @@ namespace fast_sstream {
                 }
             }
         };
-        int _base;
         std::streamsize _gcount;
     protected:
         io_traits() = delete;
-        io_traits(buf_type* buf) :src{ buf }, _precision{ 6 }, _base{ 10 }, _gcount{ 0 }, ios_traits{} {};
-        io_traits(io_traits&& other) :src{ std::move(other.src) }, _base{ std::move(other._base) }, _precision{ std::move(other._precision) }, _gcount{ std::move(other._gcount) }, ios_traits{ std::move(other) } {};
+        io_traits(buf_type* buf) :src{ buf }, _precision{ 6 }, _gcount{ 0 }, ios_traits{} {};
+        io_traits(io_traits&& other) :src{ std::move(other.src) }, _precision{ std::move(other._precision) }, _gcount{ std::move(other._gcount) }, ios_traits{ std::move(other) } {};
         void swap(io_traits& other)noexcept(true) {
             std::swap(src, other.src);
             std::swap(_precision, other._precision);
-            std::swap(_base, other._base);
             std::swap(_gcount, other._gcount);
             ios_traits::swap(other);
         };
     public:
-
-        void setbase(int n_base)noexcept {
-            if (n_base < 2 || n_base>36)return;
-            _base = n_base;
-        };
 
         inline io_traits& putback(char_type ch)noexcept(src->sputbackc(ch)) {
             _gcount = 0;
@@ -1356,7 +1375,7 @@ namespace fast_sstream {
         //for the type that specialized the parser
         template<typename Type>
         io_traits& operator<<(Type&& value) {
-            parser<std::remove_all_extents_t<Type>, char_type>::parse(std::forward<Type>(value), this, src);
+            parser<Type, char_type>::parse(std::forward<Type>(value), this, src);
             return *this;
         };
         io_traits& operator<<(const char_type value) {
