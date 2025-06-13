@@ -683,28 +683,37 @@ namespace fast_sstream {
         ios::iostate _state;
         ios::iostate _mask;
         fmtflag _flag;
+        std::streamsize _precision;
         int _base;
     protected:
-        ios_traits()noexcept :_state{ ios::goodbit }, _flag{ fmtflag::skipws | fmtflag::boolalpha | fmtflag::general | fmtflag::stdcpy }, _mask{}, _base{ 10 } {};
+        ios_traits()noexcept :_state{ ios::goodbit }, _flag{ fmtflag::skipws | fmtflag::boolalpha | fmtflag::general | fmtflag::stdcpy }, _mask{}, _precision{ 6 }, _base{ 10 } {};
         void swap(ios_traits& other)noexcept(true) {
             fmtflag _ftmp = _flag;
             _flag = other._flag;
             other._flag = _ftmp;
             std::swap(_base, other._base);
             std::swap(_state, other._state);
+            std::swap(_precision, other._precision);
             std::swap(_mask, other._mask);
         };
     public:
         //constructor
         ios_traits(const ios_traits&) = delete;
-        ios_traits(ios_traits&& other)noexcept :_flag(std::move(other._flag)), _mask(std::move(other._mask)), _state(std::move(other._state)) {};
+        ios_traits(ios_traits&& other)noexcept :_flag(std::move(other._flag)), _mask(std::move(other._mask)), _state(std::move(other._state)), _precision(std::move(other._precision)), _base(std::move(other._base)) {};
 
-        //value
-
+        //base
         inline int base()const noexcept { return _base; };
         void base(int n_base)noexcept {
             if (n_base < 2 || n_base>36)return;
             _base = n_base;
+        };
+
+        //precision
+        inline std::streamsize precision()const noexcept { return _precision; };
+        std::streamsize precision(std::streamsize new_precision) {
+            std::streamsize _pre = _precision;
+            _precision = new_precision;
+            return _pre;
         };
 
         //ios state
@@ -741,6 +750,7 @@ namespace fast_sstream {
         inline operator bool()const noexcept { return !fail(); };
     };
 
+    //flag manipulators
     ios_traits& boolalpha(ios_traits& stream)noexcept {
         stream.setf(fmtflag::boolalpha);
         return stream;
@@ -783,6 +793,35 @@ namespace fast_sstream {
         return stream;
     };
 
+	//I/O manipulators support
+    template<typename callable>
+    struct parser<callable, char, std::enable_if_t<std::is_invocable_v<callable, ios_traits&>, void>> {
+        template<typename input_output_trait,typename Buf>
+        static void parse(callable&& func, input_output_trait* trait, Buf* buf) {
+            func(*trait);
+        };
+    };
+    template<typename callable>
+    struct scanner<callable, char, std::enable_if_t<std::is_invocable_v<callable, ios_traits&>, void>> {
+        template<typename input_output_trait, typename Buf>
+        static void scan(callable&& func, input_output_trait* trait, Buf* buf) {
+            func(*trait);
+        };
+    };
+    //value manipulators
+    auto&& setprecision(int pre) {
+        return [pre](ios_traits& trait)->ios_traits& {
+            trait.precision(pre);
+            return trait;
+            };
+    };
+    auto&& setbase(int num) {
+        return [num](ios_traits& trait)->ios_traits& {
+            trait.base(num);
+            return trait;
+            };
+    };
+
     template<typename BufT, typename CharT, typename Traits = std::char_traits<CharT>>
     class output_traits :public ios_traits {
     private:
@@ -792,28 +831,19 @@ namespace fast_sstream {
         using buf_type = BufT;
         using pos_type = typename traits_type::pos_type;
         using off_type = typename traits_type::off_type;
-        std::streamsize _precision;
         buf_type* src;
 
         template<typename, typename, typename>
         friend struct parser;
     protected:
         output_traits() = delete;
-        output_traits(buf_type* associate) :src{ associate }, _precision{ 6 }, ios_traits{} {};
-        output_traits(output_traits&& other) :src{ std::move(other.src) }, _precision{ std::move(other._precision) }, ios_traits{ std::move(other) } {};
+        output_traits(buf_type* associate) :src{ associate }, ios_traits{} {};
+        output_traits(output_traits&& other) :src{ std::move(other.src) }, ios_traits{ std::move(other) } {};
         void swap(output_traits& other)noexcept(true) {
             ios_traits::swap(other);
-            std::swap(_precision, other._precision);
             std::swap(src, other.src);
         };
     public:
-        //precision
-        inline std::streamsize precision()const noexcept { return _precision; };
-        std::streamsize precision(std::streamsize new_precision) {
-            std::streamsize _pre = _precision;
-            _precision = new_precision;
-            return _pre;
-        };
 
         //write
         output_traits& put(char_type ch) {
@@ -956,7 +986,6 @@ namespace fast_sstream {
         };
 
     public:
-
         inline input_traits& putback(char_type ch)noexcept(noexcept(src->sputbackc(ch))) {
             _gcount = 0;
             src->sputbackc(ch);
@@ -1155,7 +1184,6 @@ namespace fast_sstream {
         using buf_type = BufT;
         using pos_type = typename traits_type::pos_type;
         using off_type = typename traits_type::off_type;
-        std::streamsize _precision;
         buf_type* src;
 
         template<typename, typename, typename>
@@ -1175,16 +1203,14 @@ namespace fast_sstream {
         std::streamsize _gcount;
     protected:
         io_traits() = delete;
-        io_traits(buf_type* buf) :src{ buf }, _precision{ 6 }, _gcount{ 0 }, ios_traits{} {};
-        io_traits(io_traits&& other) :src{ std::move(other.src) }, _precision{ std::move(other._precision) }, _gcount{ std::move(other._gcount) }, ios_traits{ std::move(other) } {};
+        io_traits(buf_type* buf) :src{ buf }, _gcount{ 0 }, ios_traits{} {};
+        io_traits(io_traits&& other) :src{ std::move(other.src) }, _gcount{ std::move(other._gcount) }, ios_traits{ std::move(other) } {};
         void swap(io_traits& other)noexcept(true) {
             std::swap(src, other.src);
-            std::swap(_precision, other._precision);
             std::swap(_gcount, other._gcount);
             ios_traits::swap(other);
         };
     public:
-
         inline io_traits& putback(char_type ch)noexcept(src->sputbackc(ch)) {
             _gcount = 0;
             src->sputbackc(ch);
@@ -1325,13 +1351,6 @@ namespace fast_sstream {
                 this->setstate(ios::badbit, "io_traits::seekg: bad position seek");
             }
             return *this;
-        };
-        //precision
-        inline std::streamsize precision()const noexcept { return _precision; };
-        std::streamsize precision(std::streamsize new_precision) {
-            std::streamsize _pre = _precision;
-            _precision = new_precision;
-            return _pre;
         };
 
         //write
