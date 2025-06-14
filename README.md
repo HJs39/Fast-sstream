@@ -99,7 +99,7 @@ ss << "output test\n" << fast_sstream::nostdcpy;
 ss >> stdout;
 ss << 3939;
 ss >> std::cout;
-```text
+```
 
 output:
 
