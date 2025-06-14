@@ -279,39 +279,41 @@ namespace fast_sstream {
     inline constexpr bool _xshowmanyc = placeholder::derived_xshowmanyc<Ts...>;
 
     enum class fmtflag :uint8_t {
-        scientific = std::chars_format::scientific,
-        fixed = std::chars_format::fixed,
-        hex = std::chars_format::hex,
-        general = std::chars_format::general,
+        scientific = 1,
+        fixed = 2,
+        hex = 4,
+        general = scientific | fixed,
         skipws = 8,
         boolalpha = 16,
         stdcpy = 32,
     };
 
-    fmtflag operator|(fmtflag lt, fmtflag rt) {
+    constexpr fmtflag operator|(fmtflag lt, fmtflag rt) {
         return static_cast<fmtflag>(static_cast<uint8_t>(lt) | static_cast<uint8_t>(rt));
     };
-    fmtflag operator& (fmtflag lt, fmtflag rt) {
+    constexpr fmtflag operator& (fmtflag lt, fmtflag rt) {
         return static_cast<fmtflag>(static_cast<uint8_t>(lt) & static_cast<uint8_t>(rt));
     };
-    fmtflag operator~(fmtflag lt) {
+    constexpr fmtflag operator~(fmtflag lt) {
         return static_cast<fmtflag>(~static_cast<uint8_t>(lt));
     };
-    fmtflag& operator|=(fmtflag& lt, fmtflag rt) {
+    constexpr fmtflag& operator|=(fmtflag& lt, fmtflag rt) {
         lt = static_cast<fmtflag>(static_cast<uint8_t>(lt) | static_cast<uint8_t>(rt));
         return lt;
     };
-    fmtflag& operator&=(fmtflag& lt, fmtflag rt) {
+    constexpr fmtflag& operator&=(fmtflag& lt, fmtflag rt) {
         lt = static_cast<fmtflag>(static_cast<uint8_t>(lt) & static_cast<uint8_t>(rt));
         return lt;
     };
-    fmtflag& operator^=(fmtflag& lt, fmtflag rt) {
+    constexpr fmtflag& operator^=(fmtflag& lt, fmtflag rt) {
         lt = static_cast<fmtflag>(static_cast<uint8_t>(lt) ^ static_cast<uint8_t>(rt));
         return lt;
     };
-    fmtflag operator^(fmtflag lt, fmtflag rt) {
+    constexpr fmtflag operator^(fmtflag lt, fmtflag rt) {
         return static_cast<fmtflag>(static_cast<uint8_t>(lt) ^ static_cast<uint8_t>(rt));
     };
+
+    constexpr fmtflag floatfield = fmtflag::fixed | fmtflag::scientific | fmtflag::hex;
 
     template<typename value_type, typename result_char_type, typename = void>
     //                ^parameter type     ^result char type         ^parameter type requires
@@ -404,6 +406,13 @@ namespace fast_sstream {
         inline constexpr static int size = 10;
     };
 
+    std::chars_format get_format(fmtflag flag) {
+        if ((flag & fmtflag::general) == fmtflag::general)return std::chars_format::general;
+        if ((flag & fmtflag::scientific) == fmtflag::scientific)return std::chars_format::scientific;
+        if ((flag & fmtflag::fixed) == fmtflag::fixed)return std::chars_format::fixed;
+        if ((flag & fmtflag::hex) == fmtflag::hex)return std::chars_format::hex;
+    }
+
     template<typename Integer>
     struct parser<Integer, char, std::enable_if_t<integer<Integer>, void>> {
         using traits_type = std::char_traits<char>;
@@ -465,18 +474,14 @@ namespace fast_sstream {
                 trait->setstate(ios::badbit, "parser: value too large");
                 return;
             }
-            auto result = std::to_chars(buf->pptr(), buf->epptr(), value, (trait->flag() & fmtflag::fixed) != fmtflag{} ?
-                std::chars_format::fixed : (trait->flag() & fmtflag::scientific) != fmtflag{} ? std::chars_format::scientific :
-                (trait->flag() & fmtflag::hex) != fmtflag{} ? std::chars_format::hex : std::chars_format::general, trait->precision());
+            auto result = std::to_chars(buf->pptr(), buf->epptr(), value, get_format(trait->flag()), trait->precision());
             if (result.ec != std::errc{}) {
                 do {
                     if (buf->overflow() == traits_type::eof()) {
                         trait->setstate(ios::badbit, "parser: value too large");
                         return;
                     }
-                    result = std::to_chars(buf->pptr(), buf->epptr(), value, (trait->flag() & fmtflag::fixed) != fmtflag{} ?
-                        std::chars_format::fixed : (trait->flag() & fmtflag::scientific) != fmtflag{} ? std::chars_format::scientific :
-                        (trait->flag() & fmtflag::hex) != fmtflag{} ? std::chars_format::hex : std::chars_format::general, trait->precision());
+                    result = std::to_chars(buf->pptr(), buf->epptr(), value, get_format(trait->flag()), trait->precision());
                 } while (result.ec != std::errc{});
             }
             buf->pbump(result.ptr - buf->pptr());
@@ -496,9 +501,7 @@ namespace fast_sstream {
             }
             if (buf->gptr() != buf->egptr() && (*(buf->egptr() - 1) == '.' || std::isalnum(*(buf->egptr() - 1))))buf->underflow();
             if ((trait->flag() & fmtflag::skipws) != fmtflag{})trait->skipws();
-            auto [ptr, errc] = std::from_chars(buf->gptr(), buf->egptr(), value, (trait->flag() & fmtflag::fixed) != fmtflag{} ?
-                std::chars_format::fixed : (trait->flag() & fmtflag::scientific) != fmtflag{} ? std::chars_format::scientific :
-                (trait->flag() & fmtflag::hex) != fmtflag{} ? std::chars_format::hex : std::chars_format::general);
+            auto [ptr, errc] = std::from_chars(buf->gptr(), buf->egptr(), value, get_format(trait->flag()));
             if (errc == std::errc{}) {
                 buf->setg(buf->eback(), const_cast<char*>(ptr), buf->egptr());
                 if (ptr == buf->epptr())trait->setstate(ios::eofbit, "scanner: eof");
@@ -760,20 +763,19 @@ namespace fast_sstream {
         return stream;
     };
     ios_traits& fixed(ios_traits& stream)noexcept {
-        stream.setf(fmtflag::fixed);
+        stream.setf(fmtflag::fixed, floatfield);
         return stream;
     };
     ios_traits& scientific(ios_traits& stream)noexcept {
-        stream.setf(fmtflag::scientific);
+        stream.setf(fmtflag::scientific, floatfield);
         return stream;
     };
     ios_traits& hex(ios_traits& stream)noexcept {
-        stream.setf(fmtflag::hex);
+        stream.setf(fmtflag::hex, floatfield);
         return stream;
     };
     ios_traits& defaultfloat(ios_traits& stream)noexcept {
-        stream.unsetf(fmtflag::hex);
-        stream.setf(fmtflag::general);
+        stream.setf(fmtflag::general, floatfield);
         return stream;
     };
     ios_traits& skipws(ios_traits& stream)noexcept {
@@ -809,13 +811,13 @@ namespace fast_sstream {
         };
     };
     //value manipulators
-    auto&& setprecision(int pre) {
+    inline auto setprecision(int pre) {
         return [pre](ios_traits& trait)->ios_traits& {
             trait.precision(pre);
             return trait;
             };
     };
-    auto&& setbase(int num) {
+    inline auto setbase(int num) {
         return [num](ios_traits& trait)->ios_traits& {
             trait.base(num);
             return trait;
