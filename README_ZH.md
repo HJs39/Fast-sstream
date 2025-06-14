@@ -146,7 +146,7 @@ namespace fast_sstream {
             buf->gbump(1);
             fast_sstream::scanner<bool, char>::scan(value.b, trait, buf);
             buf->gbump(1);
-            //上面的只是一個簡單的範例，你可以用更多的檢查和拋擲異常來保證解果準確性
+            //上面的只是一個簡單的範例，你可以用更多的檢查和拋擲異常來保證結果準確性
         };
     };
 }
