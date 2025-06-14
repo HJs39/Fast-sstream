@@ -1,4 +1,5 @@
 # `fsstream` library
+[中文版本](https://github.com/HJs39/Fast-sstream/blob/61ec87a005e16ddcd54591018368ca2e25bda537/README_ZH.md)
 
 `fsstream` is a header-only string stream library, it provides standard-like string stream to translate various values to characters, and you can specialize the `parser` and `scanner` classes to support your custom types.
 
