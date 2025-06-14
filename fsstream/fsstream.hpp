@@ -452,7 +452,6 @@ namespace fast_sstream {
                 return;
             }
             if (buf->gptr() != buf->egptr() && std::isalnum(*(buf->egptr() - 1)))buf->underflow();
-            if ((trait->flag() & fmtflag::skipws) != fmtflag{})trait->skipws();
             auto [ptr, errc] = std::from_chars(buf->gptr(), buf->egptr(), value, trait->base());
             if (errc == std::errc{}) {
                 buf->setg(buf->eback(), const_cast<char*>(ptr), buf->egptr());
@@ -500,7 +499,6 @@ namespace fast_sstream {
                 return;
             }
             if (buf->gptr() != buf->egptr() && (*(buf->egptr() - 1) == '.' || std::isalnum(*(buf->egptr() - 1))))buf->underflow();
-            if ((trait->flag() & fmtflag::skipws) != fmtflag{})trait->skipws();
             auto [ptr, errc] = std::from_chars(buf->gptr(), buf->egptr(), value, get_format(trait->flag()));
             if (errc == std::errc{}) {
                 buf->setg(buf->eback(), const_cast<char*>(ptr), buf->egptr());
@@ -560,7 +558,6 @@ namespace fast_sstream {
                 trait->setstate(ios::eofbit, "scanner: eof");
                 return;
             }
-            else if ((trait->flag() & fmtflag::skipws) != fmtflag{})trait->skipws();
             if ((trait->flag() & fmtflag::boolalpha) != fmtflag{}) {
                 if (buf->egptr() - buf->gptr() < 4 && buf->underflow() == traits_type::eof()) {
                     trait->setstate(ios::failbit, "scanner: failed to cast \"Boolean\"");
@@ -611,7 +608,6 @@ namespace fast_sstream {
                 trait->setstate(ios::failbit, "scanner: no such data");
                 return;
             }
-            if ((trait->flag() & fmtflag::skipws) != fmtflag{})trait->skipws();
             ch = buf->sgetc();
             if (ch == traits_type::eof()) trait->setstate(ios::failbit | ios::eofbit, "scanner: failed to read data");
             else  buf->gbump(1);
@@ -623,7 +619,6 @@ namespace fast_sstream {
                 trait->setstate(ios::failbit, "scanner: no such data");
                 return;
             }
-            if ((trait->flag() & fmtflag::skipws) != fmtflag{})trait->skipws();
             CharType* _p = buf->gptr();
             CharType* _g = ch;
             std::streamsize count{ 0 };
@@ -647,7 +642,6 @@ namespace fast_sstream {
                 return;
             }
             value.clear();
-            if ((trait->flag() & fmtflag::skipws) != fmtflag{})trait->skipws();
             CharType* _p = buf->gptr();
             std::streamsize count{ 0 };
             while (true) {
@@ -1134,15 +1128,18 @@ namespace fast_sstream {
         //for the type that specialized the scanner
         template<typename Type>
         input_traits& operator>>(Type& value) {
+            if ((this->flag() & fmtflag::skipws) != fmtflag{})this->skipws();
             scanner<Type, char_type>::scan(value, this, src);
             return *this;
         };
         template<typename Trait, typename SAlloc>
         input_traits& operator>>(std::basic_string<char_type, Trait, SAlloc>& value) {
+            if ((this->flag() & fmtflag::skipws) != fmtflag{})this->skipws();
             scanner<char_type, char_type>::scan(value, this, src);
             return *this;
         };
         input_traits& operator>>(std::istringstream& iss) {
+            if ((this->flag() & fmtflag::skipws) != fmtflag{})this->skipws();
             if ((this->flag() & fmtflag::stdcpy) == fmtflag{}) {
                 iss.str(src->view());
             }
@@ -1155,6 +1152,7 @@ namespace fast_sstream {
         };
         //C-type I/O support
         input_traits& operator>>(std::FILE* dest) {
+            if ((this->flag() & fmtflag::skipws) != fmtflag{})this->skipws();
             src->underflow();
             if ((this->flag() & fmtflag::stdcpy) != fmtflag{}) {
                 std::fwrite(src->eback(), sizeof(char_type), src->egptr() - src->eback(), dest);
@@ -1457,19 +1455,23 @@ namespace fast_sstream {
         //for the type that specialized the scanner
         template<typename Type>
         io_traits& operator>>(Type& value) {
+            if ((this->flag() & fmtflag::skipws) != fmtflag{})this->skipws();
             scanner<Type, char_type>::scan(value, this, src);
             return *this;
         };
         template<std::size_t N>
         io_traits& operator>>(const char_type(&value)[N]) {
+            if ((this->flag() & fmtflag::skipws) != fmtflag{})this->skipws();
             scanner<char_type, char_type>::scan(value, this, src);
             return *this;
         };
         template<typename Trait, typename SAlloc>
         io_traits& operator>>(std::basic_string<char_type, Trait, SAlloc>& value) {
+            if ((this->flag() & fmtflag::skipws) != fmtflag{})this->skipws();
             scanner<char_type, char_type>::scan(value, this, src);
         };
         io_traits& operator>>(std::istringstream& iss) {
+            if ((this->flag() & fmtflag::skipws) != fmtflag{})this->skipws();
             if ((this->flag() & fmtflag::stdcpy) == fmtflag{}) {
                 iss.str(src->view());
             }
@@ -1482,6 +1484,7 @@ namespace fast_sstream {
         };
         //C-type I/O support
         io_traits& operator>>(std::FILE* dest) {
+            if ((this->flag() & fmtflag::skipws) != fmtflag{})this->skipws();
             src->underflow();
             if ((this->flag() & fmtflag::stdcpy) != fmtflag{}) {
                 std::fwrite(src->eback(), sizeof(char_type), src->egptr() - src->eback(), dest);
