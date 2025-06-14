@@ -1,7 +1,8 @@
 # `fsstream` library
 [中文版本](https://github.com/HJs39/Fast-sstream/blob/61ec87a005e16ddcd54591018368ca2e25bda537/README_ZH.md)
 
-`fsstream` is a header-only string stream library, it provides standard-like string stream to translate various values to characters, and you can specialize the `parser` and `scanner` classes to support your custom types.
+
+`fsstream` is a header-only string stream library, it provides standard-like string stream for converting between various data types and character sequences.you can specialize the `parser` and `scanner` classes to support your custom types.
 
 You can switch from standard string stream to `fsstream` by swapping the namespace from `std` to `fast_sstream`.
 
@@ -23,11 +24,10 @@ You can switch from standard string stream to `fsstream` by swapping the namespa
 ### Include
 
 ```cpp
-
 #include "fsstream.hpp"
 
 using namespace fast_sstream;
-//^Don't do this, it will pollute your namespace with too many empty structures and alias
+//^Don't do this, it will pollute your namespace with too many empty structures and aliases
 
 //Recommend:
 using fast_sstream::stringstream;
@@ -35,30 +35,25 @@ using fast_sstream::istringstream;
 using fast_sstream::ostringstream;
 //or
 namespace fss = fast_sstream;
-
 ```
 
 ### Basic using
 
-You can construct a empty stream and use it like standard provides.
+You can construct an empty stream and use it like the one provided by standard.(Note: When constructing with a string, `fsstream` takes it by reference instead of making a copy.)
 
 ```cpp
-
 fast_sstream::stringstream ss;
 ss << "Hello world " << 39 << ' ' << true << ' ' << 0.01 << '\n';
 std::cout << ss.view();//or ss.str()
-
 ```
 
 output:
 
 ```text
-
 Hello world 39 true 0.010000
-
 ```
 
-You can use manipulators like standard provides to switch default stream setting.
+You can use the manipulators provided by `fast_sstream` to modify the stream's state, similar to the standard library.
 
 ```cpp
 fast_sstream::stringstream ss;
@@ -71,7 +66,6 @@ std::cout << ss.view();
 output:
 
 ```text
-
 Before setting:
 integer:39
 boolean:true
@@ -80,54 +74,43 @@ After setting:
 integer:39
 boolean:1
 floating point:1.bb646p+0
-
-
 ```
 
-If want to output buffer data, you can use `operator>>` specialized for standard stream.
+To output buffer data, you can use `operator>>` specialized for standard stream.
 
 ```cpp
-
 fast_sstream::stringstream ss;
 ss << "output test\n";
 ss >> stdout >> std::cout;
-
 ```
 
 output:
 
 ```text
-
 output test
 output test
-
 ```
 
-using `fast_sstream::nostdcpy` manipulator to comsume the data.
+Use the `fast_sstream::nostdcpy` manipulator to consume the buffer's data instead of copying it.
 
 ```cpp
-
 fast_sstream::stringstream ss;
 ss << "output test\n" << fast_sstream::nostdcpy;
 ss >> stdout;
 ss << 3939;
 ss >> std::cout;
-
 ```text
 
 output:
 
 ```text
-
 output test
 3939
-
 ```
 
 And you can add your `parser` and `scanner` specialization to `fast_sstream` namespace to support custom type.
 
 ```cpp
-
 struct My_type {
     int i;
     float f;
@@ -139,9 +122,9 @@ namespace fast_sstream {
     struct parser<T, char, std::enable_if_t<same<T,My_type>, void>> {
         template<typename traits,typename Buf>
         static void parse(T&& value, traits* trait, Buf* buf) {
-            //            ^first: your type.
-            //             second:trait that calls the parse, you can use all members because parser is it's friend.
-            //             third:the buffer that traits is holding, you can use all members, but is not recommended.
+            //            ^First: the value to be parsed
+            //             Second: a pointer to the I/O traits class that called parse(). You can access its members, as parser is a friend.(not recommended)
+            //             Third: a pointer to the underlying buffer held by the traits. You can also access its members, but this is not recommended.
             buf->sputc('[');
             fast_sstream::parser<int, char>::parse(std::forward<int>(value.i), trait, buf);
             buf->sputc(',');
@@ -155,8 +138,7 @@ namespace fast_sstream {
     struct scanner<T, char, std::enable_if_t<same<T, My_type>, void>> {
         template<typename traits,typename Buf>
         static void scan(T& value, traits* trait, Buf* buf) {
-            //           ^equal to comment of parser, buf the first argument is to get the result you 
-            //            scan.
+            //           ^ Parameters are similar to parser::parse, but the first argument (value) is an out-parameter to store the scanned result.
             buf->gbump(1);
             fast_sstream::scanner<int, char>::scan(value.i, trait, buf);
             buf->gbump(1);
@@ -164,7 +146,7 @@ namespace fast_sstream {
             buf->gbump(1);
             fast_sstream::scanner<bool, char>::scan(value.b, trait, buf);
             buf->gbump(1);
-            //this is just an example, you can add more checking to ensure the result is correct.
+            // This is just a simple example. You can add more checks and throw exceptions to ensure the result is correct.
         };
     };
 }
@@ -182,10 +164,8 @@ int main() {
 output:
 
 ```text
-
 [39,0.555,false]
 scan result:[39,0.555,0]
-
 ```
 
-Tips: the `parser::parse` need to call by `std::forward` now, but I will fixed this in future.
+Tips: the `parser::parse` need to be  called with `std::forward`. I will fixed this in the future.
