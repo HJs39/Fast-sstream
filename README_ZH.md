@@ -1,6 +1,6 @@
 # `fsstream`庫
 
-[english version](https://github.com/HJs39/Fast-sstream/blob/36295a47a9d40982038dfbbda34a83a84036845f/README.md)
+[english version](README.md)
 
 `fsstream`是一個"header-only"的字串流庫，提供類標準的API流以進行字串與值得相互轉換，你可以特化`parser`與`scanner`類來支援你的自訂型別。
 
