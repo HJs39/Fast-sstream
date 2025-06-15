@@ -165,7 +165,7 @@ output:
 
 ```text
 [39,0.555,false]
-scan result:[39,0.555,0]
+scan result:[39,0.555,false]
 ```
 
 Tips: the `parser::parse` need to be  called with `std::forward`. I will fixed this in the future.
