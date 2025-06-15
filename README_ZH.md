@@ -37,7 +37,7 @@ using fast_sstream::ostringstream;
 namespace fss = fast_sstream;
 ```
 
-### Basic using
+### 基本使用
 
 你可以像標準字串流一般創建並使用它(但在初始建構中傳入字串將引用而非複製)
 
@@ -101,7 +101,7 @@ ss << 3939;
 ss >> std::cout;
 ```
 
-output:
+輸出:
 
 ```text
 output test
@@ -165,7 +165,7 @@ int main() {
 
 ```text
 [39,0.555,false]
-scan result:[39,0.555,0]
+scan result:[39,0.555,false]
 ```
 
 Tips: 目前`parser::parse`需要使用`std::forward`，這個問題會在未來修復
