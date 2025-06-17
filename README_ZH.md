@@ -168,4 +168,43 @@ int main() {
 scan result:[39,0.555,false]
 ```
 
-Tips: 目前`parser::parse`需要使用`std::forward`，這個問題會在未來修復
+### format
+
+`format`是一個自任意`output_traits`或`io_traits`繼承的流所持有的簡易格式化器，它提供一種用於替代鏈式調用`operator<<`的簡易格式化方法
+以下為`fast-sstream`的格式化語法:
+
+* `%`是一個格式化字元，當它被掃瞄到時將會令`format`自參數包中抽取下一個參數並呼叫`parser<TYPE>::parse`格式化
+
+* `^`是一個格式化忽略字元，當它被掃描到時將會令`format`自參數包中抽取下一個參數並丟棄
+
+* `\`是脫出字元，當它被掃描到時將會令`format`忽略下一個字元的特性直接寫入緩衝
+
+你可以使用`format`來簡化`parser`的撰寫
+節自上方的例子:
+
+```cpp
+namespace fast_sstream {
+    template<typename T>
+    struct parser<T, char, std::enable_if_t<same<T,My_type>, void>> {
+        //原先的寫法
+        template<typename traits,typename Buf>
+        static void parse(T&& value, traits* trait, Buf* buf) {
+            buf->sputc('[');
+            fast_sstream::parser<int, char>::parse(std::forward<int>(value.i), trait, buf);
+            buf->sputc(',');
+            fast_sstream::parser<float, char>::parse(std::forward<float>(value.f), trait, buf);
+            buf->sputc(',');
+            fast_sstream::parser<bool, char>::parse(std::forward<bool>(value.b), trait, buf);
+            buf->sputc(']');
+        };
+    };
+    //簡化版
+    template<typename T>
+    struct parser<T, char, std::enable_if_t<same<T,My_type>, void>> {
+        template<typename traits,typename Buf>
+        static void parse(T&& value, traits* trait, Buf* buf) {
+            trait->format("[%,%,%]",value.i,value.f,value.b);
+        };
+    };
+}
+```
