@@ -1,6 +1,6 @@
 # `fsstream`庫
 
-[english version](https://github.com/HJs39/Fast-sstream/blob/36295a47a9d40982038dfbbda34a83a84036845f/README.md)
+[english version](README.md)
 
 `fsstream`是一個"header-only"的字串流庫，提供類標準的API流以進行字串與值得相互轉換，你可以特化`parser`與`scanner`類來支援你的自訂型別。
 
@@ -24,7 +24,6 @@
 ### 包含
 
 ```cpp
-
 #include "fsstream.hpp"
 
 using namespace fast_sstream;
@@ -36,27 +35,22 @@ using fast_sstream::istringstream;
 using fast_sstream::ostringstream;
 //或
 namespace fss = fast_sstream;
-
 ```
 
-### Basic using
+### 基本使用
 
 你可以像標準字串流一般創建並使用它(但在初始建構中傳入字串將引用而非複製)
 
 ```cpp
-
 fast_sstream::stringstream ss;
 ss << "Hello world " << 39 << ' ' << true << ' ' << 0.01 << '\n';
 std::cout << ss.view();//or ss.str()
-
 ```
 
 輸出:
 
 ```text
-
 Hello world 39 true 0.010000
-
 ```
 
 你可以使用`fast_sstream`中提供的操作子以修改流的狀態
@@ -72,7 +66,6 @@ std::cout << ss.view();
 輸出:
 
 ```text
-
 Before setting:
 integer:39
 boolean:true
@@ -81,54 +74,43 @@ After setting:
 integer:39
 boolean:1
 floating point:1.bb646p+0
-
-
 ```
 
 如果需要輸出資料，可以使用`operator>>`對標準流的特化
 
 ```cpp
-
 fast_sstream::stringstream ss;
 ss << "output test\n";
 ss >> stdout >> std::cout;
-
 ```
 
 輸出:
 
 ```text
-
 output test
 output test
-
 ```
 
 使用`fast_sstream::nostdcpy`來消耗緩衝區資料而非複製它
 
 ```cpp
-
 fast_sstream::stringstream ss;
 ss << "output test\n" << fast_sstream::nostdcpy;
 ss >> stdout;
 ss << 3939;
 ss >> std::cout;
+```
+
+輸出:
 
 ```text
-
-output:
-
-```text
-
 output test
 3939
-
 ```
 
 你可以向`fast_sstream`命名空間添加`parser`與`scanner`的特化來支援你的自訂型別
 
 ```cpp
-
 struct My_type {
     int i;
     float f;
@@ -164,7 +146,7 @@ namespace fast_sstream {
             buf->gbump(1);
             fast_sstream::scanner<bool, char>::scan(value.b, trait, buf);
             buf->gbump(1);
-            //上面的只是一個簡單的範例，你可以用更多的檢查和拋擲異常來保證解果準確性
+            //上面的只是一個簡單的範例，你可以用更多的檢查和拋擲異常來保證結果準確性
         };
     };
 }
@@ -182,10 +164,8 @@ int main() {
 輸出:
 
 ```text
-
 [39,0.555,false]
-scan result:[39,0.555,0]
-
+scan result:[39,0.555,false]
 ```
 
 Tips: 目前`parser::parse`需要使用`std::forward`，這個問題會在未來修復
