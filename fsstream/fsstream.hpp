@@ -393,18 +393,6 @@ namespace fast_sstream {
     struct parse_over_allocation_size<long long> {
         inline constexpr static int size = 10;
     };
-    template<>
-    struct parse_over_allocation_size<float> {
-        inline constexpr static int size = 7;
-    };
-    template<>
-    struct parse_over_allocation_size<double> {
-        inline constexpr static int size = 7;
-    };
-    template<>
-    struct parse_over_allocation_size<long double> {
-        inline constexpr static int size = 10;
-    };
 
     std::chars_format get_format(fmtflag flag) {
         if ((flag & fmtflag::general) == fmtflag::general)return std::chars_format::general;
@@ -418,7 +406,7 @@ namespace fast_sstream {
         using traits_type = std::char_traits<char>;
         using ios = std::ios_base;
         template<typename input_output_trait, typename buffer>
-        static void parse(Integer&& value, input_output_trait* trait, buffer* buf) {
+        static void parse(Integer value, input_output_trait* trait, buffer* buf) {
             if (buf->pptr() == buf->epptr() && buf->overflow() == traits_type::eof()) {
                 trait->setstate(ios::badbit, "parser: value too large");
                 return;
@@ -468,7 +456,7 @@ namespace fast_sstream {
         using traits_type = std::char_traits<char>;
         using ios = std::ios_base;
         template<typename input_output_trait, typename buffer>
-        static void parse(floating_point_t&& value, input_output_trait* trait, buffer* buf) {
+        static void parse(floating_point_t value, input_output_trait* trait, buffer* buf) {
             if (buf->pptr() == buf->epptr() && buf->overflow() == traits_type::eof()) {
                 trait->setstate(ios::badbit, "parser: value too large");
                 return;
@@ -515,7 +503,7 @@ namespace fast_sstream {
         using traits_type = std::char_traits<char>;
         using ios = std::ios_base;
         template<typename input_output_trait, typename buffer>
-        static void parse(Boolean&& value, input_output_trait* trait, buffer* buf) {
+        static void parse(Boolean value, input_output_trait* trait, buffer* buf) {
             if ((trait->flag() & fmtflag::boolalpha) != fmtflag{}) {
                 if (value) {
                     if (buf->epptr() - buf->pptr() < 4 && buf->overflow() == traits_type::eof()) {
@@ -674,6 +662,22 @@ namespace fast_sstream {
         };
     };
 
+    struct check_format_result {
+        std::size_t format_arg_num;
+        std::uint64_t str_size;
+    };
+
+    template<typename CharT>
+    check_format_result check_format(const CharT* str) {
+        check_format_result result{ 0,0 };
+        for (;; ++str) {
+            if (*str == '\0')return result;
+            else if (*str == '\\')  ++str;
+            else if (*str == '%' || *str == '^') ++result.format_arg_num;
+            ++result.str_size;
+        }
+    };
+
     class ios_traits {
     private:
         using ios = std::ios_base;
@@ -829,6 +833,40 @@ namespace fast_sstream {
         using off_type = typename traits_type::off_type;
         buf_type* src;
 
+        //consume any value matched by the format character '^'
+        template<typename T>
+        inline constexpr void consume(T&&)const noexcept {
+            return;
+        };
+
+        bool write_fmt(const char_type*& fmt, const char_type* end_pos) {
+            if (this->fail())return false;//fail to format, skip argument
+            for (;; ++fmt) {
+                if (fmt == end_pos)return false;
+                else if (*fmt == '\\') {
+                    ++fmt;
+                    if (src->sputc(*fmt) == traits_type::eof()) {
+                        this->setstate(ios::failbit, "output_traits::write_fmt:no such memory");
+                        return false;
+                    }
+                }
+                else if (*fmt == '%') {
+                    ++fmt;
+                    return true;//can format argument
+                }
+                else if (*fmt == '^') {
+                    ++fmt;
+                    return false;//skip format argument
+                }
+                else {
+                    if (src->sputc(*fmt) == traits_type::eof()) {
+                        this->setstate(ios::failbit, "output_traits::write_fmt:no such memory");
+                        return false;
+                    }
+                }
+            }
+        };
+
         template<typename, typename, typename>
         friend struct parser;
     protected:
@@ -858,6 +896,22 @@ namespace fast_sstream {
             else {
                 this->clear();
             }
+            return *this;
+        };
+
+        //use '%' to format a argument to buffer
+        //use '^' to ignore a argument from pack
+        //use '\'to escape the formatting character
+        template<typename... Args>
+        io_traits& format(const CharT* fmt, Args&&...args) {
+            auto [fmt_count, str_size] = check_format(fmt);
+            if (fmt_count > sizeof...(args)) {
+                this->setstate(ios::badbit, "output_traits::format:no such arguments");
+                return *this;
+            }
+            const CharT* fmt_pos = fmt;
+            const CharT* fmt_end = fmt + str_size + 1;
+            (..., (write_fmt(fmt_pos, fmt_end) ? static_cast<void>((*this << std::forward<Args>(args))) : consume(std::forward<Args>(args))));
             return *this;
         };
 
@@ -1185,6 +1239,7 @@ namespace fast_sstream {
         using pos_type = typename traits_type::pos_type;
         using off_type = typename traits_type::off_type;
         buf_type* src;
+        std::streamsize _gcount;
 
         template<typename, typename, typename>
         friend struct parser;
@@ -1200,7 +1255,41 @@ namespace fast_sstream {
                 }
             }
         };
-        std::streamsize _gcount;
+
+        //consume any value matched by the format character '^'
+        template<typename T>
+        inline constexpr void consume(T&&)const noexcept {
+            return;
+        };
+
+        bool write_fmt(const char_type*& fmt, const char_type* end_pos) {
+            if (this->fail())return false;//fail to format, skip argument
+            for (;; ++fmt) {
+                if (fmt == end_pos)return false;
+                else if (*fmt == '\\') {
+                    ++fmt;
+                    if (src->sputc(*fmt) == traits_type::eof()) {
+                        this->setstate(ios::failbit, "io_traits::write_fmt:no such memory");
+                        return false;
+                    }
+                }
+                else if (*fmt == '%') {
+                    ++fmt;
+                    return true;//can format argument
+                }
+                else if (*fmt == '^') {
+                    ++fmt;
+                    return false;//skip format argument
+                }
+                else {
+                    if (src->sputc(*fmt) == traits_type::eof()) {
+                        this->setstate(ios::failbit, "io_traits::write_fmt:no such memory");
+                        return false;
+                    }
+                }
+            }
+        };
+
     protected:
         io_traits() = delete;
         io_traits(buf_type* buf) :src{ buf }, _gcount{ 0 }, ios_traits{} {};
@@ -1370,6 +1459,22 @@ namespace fast_sstream {
             else {
                 this->clear();
             }
+            return *this;
+        };
+
+        //use '%' to format a argument to buffer
+        //use '^' to ignore a argument from pack
+        //use '\' to escape the formatting character
+        template<typename... Args>
+        io_traits& format(const CharT* fmt, Args&&...args) {
+            auto [fmt_count, str_size] = check_format(fmt);
+            if (fmt_count > sizeof...(args)) {
+                this->setstate(ios::badbit, "io_traits::format:no such arguments");
+                return *this;
+            }
+            const CharT* fmt_pos = fmt;
+            const CharT* fmt_end = fmt + str_size + 1;
+            (..., (write_fmt(fmt_pos, fmt_end) ? static_cast<void>((*this << std::forward<Args>(args))) : consume(std::forward<Args>(args))));
             return *this;
         };
 
