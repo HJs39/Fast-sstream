@@ -175,6 +175,8 @@ Below is `fast-sstream`'s formatting syntax:
 
 * The `%` character is a placeholder for a formatted value. When `format` scans this character, it will take the next argument from the parameter pack and call `parser<TYPE>::parse` to format it.
 
+* The `^` character is an ignore placeholder. When `format` scans this character, it will consume the next argument from the parameter pack without formatting it.
+
 * The `\` character is an escape character. It causes `format` to ignore any special meaning of the character that follows it, writing it directly to the buffer instead.
 
 You can use `format` to simplify coding of `parser`.
