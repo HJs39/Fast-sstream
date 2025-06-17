@@ -2,7 +2,7 @@
 
 [中文版本](README_ZH.md)
 
-`fsstream` is a header-only string stream library, it provides standard-like string stream for converting between various data types and character sequences.you can specialize the `parser` and `scanner` classes to support your custom types.
+`fsstream` is a header-only string stream library, it provides standard-like string stream for converting between various data types and character sequences. You can specialize the `parser` and `scanner` classes to support your custom types.
 
 You can switch from standard string stream to `fsstream` by swapping the namespace from `std` to `fast_sstream`.
 
@@ -29,7 +29,7 @@ You can switch from standard string stream to `fsstream` by swapping the namespa
 using namespace fast_sstream;
 //^Don't do this, it will pollute your namespace with too many empty structures and aliases
 
-//Recommend:
+//Recommended:
 using fast_sstream::stringstream;
 using fast_sstream::istringstream;
 using fast_sstream::ostringstream;
@@ -170,14 +170,12 @@ scan result:[39,0.555,false]
 
 ### format
 
-`format` is a simple formatting function in any stream derived from `output_traits` or `io_traits`, it provide a simple way to format string instead various `operator<<` call.
+`format` is a simple formatting function available on any stream derived from `output_traits` or `io_traits`. It provides a simple way to format strings as an alternative to chained `operator<<` calls.
 Below is `fast-sstream`'s formatting syntax:
 
-* `%` character is a formatting value placeholder, if `format` scanned the character, it will take a argument from pack and call `parser<TYPE>::parse` to format.
+* The `%` character is a placeholder for a formatted value. When `format` scans this character, it will take the next argument from the parameter pack and call `parser<TYPE>::parse` to format it.
 
-* `^` character is a ignore placeholder, if `format` scanned the character, it will call `consume` to ignore a argument form pack.
-
-* `\` character is a escaped character, it will let `format` ignore what the next character is, and put it in buffer.
+* The `\` character is an escape character. It causes `format` to ignore any special meaning of the character that follows it, writing it directly to the buffer instead.
 
 You can use `format` to simplify coding of `parser`.
 Example from above:
