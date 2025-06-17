@@ -1,6 +1,6 @@
 # `fsstream` library
-[中文版本](README_ZH.md)
 
+[中文版本](README_ZH.md)
 
 `fsstream` is a header-only string stream library, it provides standard-like string stream for converting between various data types and character sequences.you can specialize the `parser` and `scanner` classes to support your custom types.
 
@@ -108,7 +108,7 @@ output test
 3939
 ```
 
-And you can add your `parser` and `scanner` specialization to `fast_sstream` namespace to support custom type.
+You can support custom types by adding specializations of `parser` and `scanner` to the `fast_sstream` namespace.
 
 ```cpp
 struct My_type {
@@ -168,4 +168,43 @@ output:
 scan result:[39,0.555,false]
 ```
 
-Tips: the `parser::parse` need to be  called with `std::forward`. I will fixed this in the future.
+### format
+
+`format` is a simple formatting function in any stream derived from `output_traits` or `io_traits`, it provide a simple way to format string instead various `operator<<` call.
+Below is `fast-sstream`'s formatting syntax:
+
+* `%` character is a formatting value placeholder, if `format` scanned the character, it will take a argument from pack and call `parser<TYPE>::parse` to format.
+
+* `^` character is a ignore placeholder, if `format` scanned the character, it will call `consume` to ignore a argument form pack.
+
+* `\` character is a escaped character, it will let `format` ignore what the next character is, and put it in buffer.
+
+You can use `format` to simplify coding of `parser`.
+Example from above:
+
+```cpp
+namespace fast_sstream {
+    //old
+    template<typename T>
+    struct parser<T, char, std::enable_if_t<same<T,My_type>, void>> {
+        template<typename traits,typename Buf>
+        static void parse(T&& value, traits* trait, Buf* buf) {
+            buf->sputc('[');
+            fast_sstream::parser<int, char>::parse(std::forward<int>(value.i), trait, buf);
+            buf->sputc(',');
+            fast_sstream::parser<float, char>::parse(std::forward<float>(value.f), trait, buf);
+            buf->sputc(',');
+            fast_sstream::parser<bool, char>::parse(std::forward<bool>(value.b), trait, buf);
+            buf->sputc(']');
+        };
+    };
+    //simplify
+    template<typename T>
+    struct parser<T, char, std::enable_if_t<same<T,My_type>, void>> {
+        template<typename traits,typename Buf>
+        static void parse(T&& value, traits* trait, Buf* buf) {
+            trait->format("[%,%,%]",value.i,value.f,value.b);
+        };
+    };
+}
+```
