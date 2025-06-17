@@ -671,9 +671,16 @@ namespace fast_sstream {
     check_format_result check_format(const CharT* str) {
         check_format_result result{ 0,0 };
         for (;; ++str) {
-            if (*str == '\0')return result;
-            else if (*str == '\\')  ++str;
-            else if (*str == '%' || *str == '^') ++result.format_arg_num;
+            if (*str == '\0') {
+                return result;
+            }
+            else if (*str == '\\') {
+                ++str;
+                ++result.str_size;
+            }
+            else if (*str == '%' || *str == '^') {
+                ++result.format_arg_num;
+            }
             ++result.str_size;
         }
     };
