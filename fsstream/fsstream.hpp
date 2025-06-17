@@ -918,7 +918,8 @@ namespace fast_sstream {
             }
             const CharT* fmt_pos = fmt;
             const CharT* fmt_end = fmt + str_size;
-            ((write_fmt(fmt_pos, fmt_end)), ..., (write_fmt(fmt_pos, fmt_end) ? static_cast<void>((*this << std::forward<Args>(args))) : consume(std::forward<Args>(args))));
+            (..., (write_fmt(fmt_pos, fmt_end) ? static_cast<void>((*this << std::forward<Args>(args))) : consume(std::forward<Args>(args))));
+            write_fmt(fmt_pos, fmt_end);
             return *this;
         };
 
@@ -1481,7 +1482,8 @@ namespace fast_sstream {
             }
             const CharT* fmt_pos = fmt;
             const CharT* fmt_end = fmt + str_size;
-            ((write_fmt(fmt_pos, fmt_end)), ..., (write_fmt(fmt_pos, fmt_end) ? static_cast<void>((*this << std::forward<Args>(args))) : consume(std::forward<Args>(args))));
+            (..., (write_fmt(fmt_pos, fmt_end) ? static_cast<void>((*this << std::forward<Args>(args))) : consume(std::forward<Args>(args))));
+            write_fmt(fmt_pos, fmt_end);
             return *this;
         };
 
