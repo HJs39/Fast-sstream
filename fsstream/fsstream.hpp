@@ -849,7 +849,7 @@ namespace fast_sstream {
         bool write_fmt(const char_type*& fmt, const char_type* end_pos) {
             if (this->fail())return false;//fail to format, skip argument
             for (;; ++fmt) {
-                if (fmt == end_pos)return false;
+                if (fmt >= end_pos)return false;
                 else if (*fmt == '\\') {
                     ++fmt;
                     if (src->sputc(*fmt) == traits_type::eof()) {
@@ -910,15 +910,15 @@ namespace fast_sstream {
         //use '^' to ignore a argument from pack
         //use '\'to escape the formatting character
         template<typename... Args>
-        io_traits& format(const CharT* fmt, Args&&...args) {
+        output_traits& format(const CharT* fmt, Args&&...args) {
             auto [fmt_count, str_size] = check_format(fmt);
             if (fmt_count > sizeof...(args)) {
                 this->setstate(ios::badbit, "output_traits::format:no such arguments");
                 return *this;
             }
             const CharT* fmt_pos = fmt;
-            const CharT* fmt_end = fmt + str_size + 1;
-            (..., (write_fmt(fmt_pos, fmt_end) ? static_cast<void>((*this << std::forward<Args>(args))) : consume(std::forward<Args>(args))));
+            const CharT* fmt_end = fmt + str_size;
+            ((write_fmt(fmt_pos, fmt_end)), ..., (write_fmt(fmt_pos, fmt_end) ? static_cast<void>((*this << std::forward<Args>(args))) : consume(std::forward<Args>(args))));
             return *this;
         };
 
@@ -1272,7 +1272,7 @@ namespace fast_sstream {
         bool write_fmt(const char_type*& fmt, const char_type* end_pos) {
             if (this->fail())return false;//fail to format, skip argument
             for (;; ++fmt) {
-                if (fmt == end_pos)return false;
+                if (fmt >= end_pos)return false;
                 else if (*fmt == '\\') {
                     ++fmt;
                     if (src->sputc(*fmt) == traits_type::eof()) {
@@ -1480,8 +1480,8 @@ namespace fast_sstream {
                 return *this;
             }
             const CharT* fmt_pos = fmt;
-            const CharT* fmt_end = fmt + str_size + 1;
-            (..., (write_fmt(fmt_pos, fmt_end) ? static_cast<void>((*this << std::forward<Args>(args))) : consume(std::forward<Args>(args))));
+            const CharT* fmt_end = fmt + str_size;
+            ((write_fmt(fmt_pos, fmt_end)), ..., (write_fmt(fmt_pos, fmt_end) ? static_cast<void>((*this << std::forward<Args>(args))) : consume(std::forward<Args>(args))));
             return *this;
         };
 
