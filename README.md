@@ -171,6 +171,7 @@ scan result:[39,0.555,false]
 ### format
 
 `format` is a simple formatting function available on any stream derived from `output_traits` or `io_traits`. It provides a simple way to format strings as an alternative to chained `operator<<` calls.
+
 Below is `fast-sstream`'s formatting syntax:
 
 * The `%` character is a placeholder for a formatted value. When `format` scans this character, it will take the next argument from the parameter pack and call `parser<TYPE>::parse` to format it.
@@ -180,6 +181,7 @@ Below is `fast-sstream`'s formatting syntax:
 * The `\` character is an escape character. It causes `format` to ignore any special meaning of the character that follows it, writing it directly to the buffer instead.
 
 You can use `format` to simplify coding of `parser`.
+
 Example from above:
 
 ```cpp
